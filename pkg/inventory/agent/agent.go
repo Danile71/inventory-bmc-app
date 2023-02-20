@@ -8,6 +8,7 @@ import (
 
 	"git.fg-tech.ru/listware/go-core/pkg/executor"
 	"git.fg-tech.ru/listware/go-core/pkg/module"
+	"github.com/apache/flink-statefun/statefun-sdk-go/v3/pkg/statefun"
 	"github.com/foliagecp/inventory-bmc-app/pkg/inventory/agent/types"
 	"github.com/sirupsen/logrus"
 )
@@ -23,11 +24,25 @@ type Agent struct {
 	executor executor.Executor
 
 	m module.Module
+
+	sessionSpec statefun.ValueSpec
+
+	genericSpec statefun.ValueSpec
 }
 
 // Run agent
 func Run() (err error) {
-	a := &Agent{}
+	a := &Agent{
+		sessionSpec: statefun.ValueSpec{
+			Name:      "inventory_session_json",
+			ValueType: module.GenericJsonType,
+		},
+
+		genericSpec: statefun.ValueSpec{
+			Name:      "inventory_generic_json",
+			ValueType: module.GenericJsonType,
+		},
+	}
 	a.ctx, a.cancel = context.WithCancel(context.Background())
 
 	if a.executor, err = executor.New(); err != nil {
@@ -52,7 +67,23 @@ func (a *Agent) run() (err error) {
 
 	log.Infof("use port (%d)", a.m.Port())
 
-	if err = a.m.Bind(types.FunctionType, a.workerFunction); err != nil {
+	if err = a.m.Bind(types.InventoryFunctionType, a.inventoryFunction); err != nil {
+		return
+	}
+
+	if err = a.m.Bind(types.ServiceFunctionType, a.serviceFunction, module.WithOnResult(a.onServiceFunctionResult), module.WithValueSpec(a.sessionSpec)); err != nil {
+		return
+	}
+
+	if err = a.m.Bind(types.SystemsFunctionType, a.systemsFunction, module.WithValueSpec(a.sessionSpec)); err != nil {
+		return
+	}
+
+	if err = a.m.Bind(types.SystemFunctionType, a.systemFunction, module.WithOnResult(a.onSystemFunctionResult), module.WithValueSpec(a.sessionSpec), module.WithValueSpec(a.genericSpec)); err != nil {
+		return
+	}
+
+	if err = a.m.Bind(types.BiosFunctionType, a.biosFunction, module.WithOnResult(a.onBiosFunctionResult), module.WithValueSpec(a.sessionSpec), module.WithValueSpec(a.genericSpec)); err != nil {
 		return
 	}
 
@@ -63,10 +94,13 @@ func (a *Agent) run() (err error) {
 
 		if err = a.m.RegisterAndListen(ctx); err != nil {
 			log.Error(err)
-			return
 		}
 
 	}()
+
+	if err = a.entrypoint(); err != nil {
+		return
+	}
 
 	<-ctx.Done()
 

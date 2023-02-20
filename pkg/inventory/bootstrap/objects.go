@@ -23,16 +23,32 @@ func createObjects(ctx context.Context) (err error) {
 		return
 	}
 
-	if err = createDiscoverFunctionObject(ctx); err != nil {
+	if err = createInventoryFunctionObject(ctx); err != nil {
+		return
+	}
+
+	if err = createServiceFunctionObject(ctx); err != nil {
+		return
+	}
+
+	if err = createSystemsFunctionObject(ctx); err != nil {
+		return
+	}
+
+	if err = createSystemFunctionObject(ctx); err != nil {
+		return
+	}
+
+	if err = createBiosFunctionObject(ctx); err != nil {
 		return
 	}
 
 	return
 }
 
-func createRedFishMountpointObject(ctx context.Context) (err error) {
+func registerObject(ctx context.Context, objectPath string, message *pbcmdb.RegisterObjectMessage) (err error) {
 	// check if object exists
-	elements, err := qdsl.Qdsl(ctx, types.FunctionContainerPath)
+	elements, err := qdsl.Qdsl(ctx, objectPath)
 	if err != nil {
 		return
 	}
@@ -42,40 +58,100 @@ func createRedFishMountpointObject(ctx context.Context) (err error) {
 		return
 	}
 
+	registerObjects = append(registerObjects, message)
+	return
+}
+
+func createRedFishMountpointObject(ctx context.Context) (err error) {
 	message, err := system.RegisterObject(types.FunctionsPath, types.FunctionContainerID, types.FunctionContainerLink, RedfishFunctionContainer{}, false, true)
 	if err != nil {
 		return
 	}
-	registerObjects = append(registerObjects, message)
-
-	return
+	return registerObject(ctx, types.FunctionContainerPath, message)
 }
 
-func createDiscoverFunctionObject(ctx context.Context) (err error) {
-	// check if object exists
-	elements, err := qdsl.Qdsl(ctx, types.FunctionPath)
-	if err != nil {
-		return
-	}
-
-	// already exists
-	if len(elements) > 0 {
-		return
-	}
-
+func createInventoryFunctionObject(ctx context.Context) (err error) {
 	function := pbtypes.Function{
 		FunctionType: &pbtypes.FunctionType{
 			Namespace: types.Namespace,
-			Type:      types.FunctionType,
+			Type:      types.InventoryFunctionType,
 		},
 		Description: types.Description,
+		Grounded:    false,
 	}
 
-	message, err := system.RegisterObject(types.FunctionContainerPath, types.FunctionID, types.FunctionLink, function, true, true)
+	message, err := system.RegisterObject(types.FunctionContainerPath, types.FunctionID, types.InventoryFunctionLink, function, false, true)
 	if err != nil {
 		return
 	}
+	return registerObject(ctx, types.InventoryFunctionPath, message)
+}
 
-	registerObjects = append(registerObjects, message)
-	return
+func createServiceFunctionObject(ctx context.Context) (err error) {
+	function := pbtypes.Function{
+		FunctionType: &pbtypes.FunctionType{
+			Namespace: types.Namespace,
+			Type:      types.ServiceFunctionType,
+		},
+		Description: types.Description,
+		Grounded:    false,
+	}
+
+	message, err := system.RegisterObject(types.InventoryFunctionPath, types.FunctionID, types.ServiceFunctionLink, function, true, true)
+	if err != nil {
+		return
+	}
+	return registerObject(ctx, types.ServiceFunctionPath, message)
+}
+
+func createSystemsFunctionObject(ctx context.Context) (err error) {
+	function := pbtypes.Function{
+		FunctionType: &pbtypes.FunctionType{
+			Namespace: types.Namespace,
+			Type:      types.SystemsFunctionType,
+		},
+		Description: types.Description,
+		Grounded:    false,
+	}
+
+	message, err := system.RegisterObject(types.InventoryFunctionPath, types.FunctionID, types.SystemsFunctionLink, function, true, true)
+	if err != nil {
+		return
+	}
+	return registerObject(ctx, types.SystemsFunctionPath, message)
+
+}
+
+func createSystemFunctionObject(ctx context.Context) (err error) {
+	function := pbtypes.Function{
+		FunctionType: &pbtypes.FunctionType{
+			Namespace: types.Namespace,
+			Type:      types.SystemFunctionType,
+		},
+		Description: types.Description,
+		Grounded:    false,
+	}
+
+	message, err := system.RegisterObject(types.InventoryFunctionPath, types.FunctionID, types.SystemFunctionLink, function, true, true)
+	if err != nil {
+		return
+	}
+	return registerObject(ctx, types.SystemFunctionPath, message)
+}
+
+func createBiosFunctionObject(ctx context.Context) (err error) {
+	function := pbtypes.Function{
+		FunctionType: &pbtypes.FunctionType{
+			Namespace: types.Namespace,
+			Type:      types.BiosFunctionType,
+		},
+		Description: types.Description,
+		Grounded:    false,
+	}
+
+	message, err := system.RegisterObject(types.InventoryFunctionPath, types.FunctionID, types.BiosFunctionLink, function, true, true)
+	if err != nil {
+		return
+	}
+	return registerObject(ctx, types.BiosFunctionPath, message)
 }

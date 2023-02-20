@@ -16,7 +16,7 @@ import (
 	"github.com/stmcginnis/gofish/redfish"
 )
 
-func (a *Agent) createOrUpdateManagers(ctx module.Context, redfishDevice device.RedfishDevice, service *gofish.Service, wg *sync.WaitGroup) (err error) {
+func (a *Agent) createOrUpdateManagers(ctx module.Context, service *gofish.Service, redfishDevice device.RedfishDevice, wg *sync.WaitGroup) (err error) {
 	defer wg.Done()
 
 	parentNode, err := a.getDocument("service.%s.redfish-devices.root", redfishDevice.UUID())

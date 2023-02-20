@@ -4,62 +4,113 @@ package agent
 
 import (
 	"fmt"
-	"sync"
 
 	"git.fg-tech.ru/listware/cmdb/pkg/cmdb/documents"
 	"git.fg-tech.ru/listware/go-core/pkg/client/system"
 	"git.fg-tech.ru/listware/go-core/pkg/module"
 	"git.fg-tech.ru/listware/proto/sdk/pbtypes"
 	"github.com/foliagecp/inventory-bmc-app/pkg/discovery/agent/types/redfish/device"
+	"github.com/foliagecp/inventory-bmc-app/pkg/inventory/agent/types"
 	"github.com/foliagecp/inventory-bmc-app/pkg/inventory/bootstrap"
-	"github.com/stmcginnis/gofish"
 	"github.com/stmcginnis/gofish/redfish"
 )
 
-func (a *Agent) createOrUpdateSystems(ctx module.Context, redfishDevice device.RedfishDevice, service *gofish.Service, wg *sync.WaitGroup) (err error) {
-	defer wg.Done()
-
-	parentNode, err := a.getDocument("service.%s.redfish-devices.root", redfishDevice.UUID())
+// flink function
+// systemsFunction (cmdbContext -> "%s.redfish-devices.root")
+func (a *Agent) systemFunction(ctx module.Context) (err error) {
+	client, err := a.getClientFromContext(ctx)
 	if err != nil {
 		return
 	}
 
-	systems, err := service.Systems()
+	m, err := a.getMessageFromContext(ctx)
 	if err != nil {
 		return
 	}
 
-	for _, computerSystem := range systems {
-		if err = a.createOrUpdateSystem(ctx, redfishDevice, parentNode, computerSystem); err != nil {
-			return
-		}
+	computerSystem, err := redfish.GetComputerSystem(client, m.Additional)
+	if err != nil {
+		return
 	}
-
-	return
+	return a.createOrUpdateSystem(ctx, computerSystem)
 }
 
-func (a *Agent) createOrUpdateSystem(ctx module.Context, redfishDevice device.RedfishDevice, parentNode *documents.Node, computerSystem *redfish.ComputerSystem) (err error) {
+func (a *Agent) createOrUpdateSystem(ctx module.Context, computerSystem *redfish.ComputerSystem) (err error) {
 	systemLink := fmt.Sprintf("system-%s", computerSystem.UUID)
 
 	var functionContext *pbtypes.FunctionContext
-	document, err := a.getDocument("system-%s.service.%s.redfish-devices.root", computerSystem.UUID, redfishDevice.UUID())
+	document, err := a.getDocument("%s.*[?@._id == '%s'?].objects.root", systemLink, ctx.Self().Id)
 	if err != nil {
-		functionContext, err = system.CreateChild(parentNode.Id.String(), "types/redfish-system", systemLink, computerSystem)
-		if err != nil {
+		if functionContext, err = system.CreateChild(ctx.Self().Id, types.RedfishSystemID, systemLink, computerSystem); err != nil {
 			return err
 		}
 	} else {
-		functionContext, err = system.UpdateObject(document.Id.String(), computerSystem)
-		if err != nil {
+		if functionContext, err = system.UpdateObject(document.Id.String(), computerSystem); err != nil {
 			return err
 		}
 	}
 
-	if err = a.executor.ExecSync(ctx, functionContext); err != nil {
+	functionContext.ReplyResult = ctx.GetReplyResult()
+
+	m := make(map[string]string)
+	ctx.Storage().Get(a.genericSpec, &m)
+
+	m[functionContext.ReplyResult.GetKey()] = systemLink
+
+	ctx.Storage().Set(a.genericSpec, m)
+
+	msg, err := module.ToMessage(functionContext)
+	if err != nil {
+		return
+	}
+	ctx.Send(msg)
+
+	computerSystem.Bios()
+
+	return // a.createOrUpdateSystemBIOS(ctx, redfishDevice, computerSystem)
+}
+
+func (a *Agent) onSystemFunctionResult(ctx module.Context, functionResult *pbtypes.FunctionResult) {
+	if !functionResult.Complete {
 		return
 	}
 
-	return a.createOrUpdateSystemBIOS(ctx, redfishDevice, computerSystem)
+	if err := a.inventoryBios(ctx, functionResult.GetReplyEgress().GetKey()); err != nil {
+		ctx.AddError(err)
+	}
+
+}
+
+func (a *Agent) inventoryBios(ctx module.Context, key string) (err error) {
+	// m := make(map[string]string)
+	// ctx.Storage().Get(a.genericSpec, &m)
+	// systemLink := m[key]
+	// delete(m, key)
+	// ctx.Storage().Set(a.genericSpec, m)
+
+	// document, err := a.getDocument("%s.*[?@._id == '%s'?].objects.root", systemLink, ctx.Self().Id)
+	// if err != nil {
+	// 	return
+	// }
+
+	// msg.Additional = link
+
+	// data, err := msg.Marshal()
+	// if err != nil {
+	// 	return err
+	// }
+
+	// functionContext, err := prepareBiosFunc(document.Id.String(), data)
+	// if err != nil {
+	// 	return
+	// }
+
+	// msg, err := module.ToMessage(functionContext)
+	// if err != nil {
+	// 	return
+	// }
+	// ctx.Send(msg)
+	return
 }
 
 func (a *Agent) createOrUpdateSystemBIOS(ctx module.Context, redfishDevice device.RedfishDevice, computerSystem *redfish.ComputerSystem) (err error) {
@@ -90,50 +141,6 @@ func (a *Agent) createOrUpdateSystemBIOS(ctx module.Context, redfishDevice devic
 	if err = a.executor.ExecSync(ctx, functionContext); err != nil {
 		return
 	}
-
-	return a.createOrUpdateSystemBiosAttributes(ctx, redfishDevice, computerSystem, bios)
-}
-
-func (a *Agent) createOrUpdateSystemBiosAttributes(ctx module.Context, redfishDevice device.RedfishDevice, computerSystem *redfish.ComputerSystem, bios *redfish.Bios) (err error) {
-	parentNode, err := a.getDocument("bios.system-%s.service.%s.redfish-devices.root", computerSystem.UUID, redfishDevice.UUID())
-	if err != nil {
-		return
-	}
-
-	biosAttributes := bios.Attributes
-
-	for biosAttributeName, _ := range biosAttributes {
-		biosAttributeValue := biosAttributes.String(biosAttributeName)
-		if err = a.createOrUpdateBiosAttribute(ctx, redfishDevice, parentNode, computerSystem, biosAttributeName, biosAttributeValue); err != nil {
-			return
-		}
-	}
-	return a.createOrUpdateSystemLed(ctx, redfishDevice, computerSystem)
-}
-
-func (a *Agent) createOrUpdateBiosAttribute(ctx module.Context, redfishDevice device.RedfishDevice, parentNode *documents.Node, computerSystem *redfish.ComputerSystem, biosAttributeName, biosAttributeValue string) (err error) {
-	biosAttribute := &bootstrap.RedfishBiosAttribute{BiosAttributeValue: biosAttributeValue}
-
-	var functionContext *pbtypes.FunctionContext
-	document, err := a.getDocument("%s.bios.system-%s.service.%s.redfish-devices.root", biosAttributeName, computerSystem.UUID, redfishDevice.UUID())
-	if err != nil {
-		functionContext, err = system.CreateChild(parentNode.Id.String(), "types/redfish-bios-attribute", biosAttributeName, biosAttribute)
-		if err != nil {
-			return err
-		}
-	} else {
-		functionContext, err = system.UpdateObject(document.Id.String(), biosAttribute)
-		if err != nil {
-			return err
-		}
-	}
-
-	msg, err := module.ToMessage(functionContext)
-	if err != nil {
-		return
-	}
-
-	ctx.Send(msg)
 
 	return
 }

@@ -1,0 +1,30 @@
+project_name: inventory
+
+builds:
+  - main: ./cmd/admin-bmc
+    id: admin-bmc
+    binary: admin-bmc
+    goos:
+      - linux
+    goarch:
+      - amd64
+    ldflags:
+      - -X main.version={{ .Version }}
+      - -X main.release={{ .ShortCommit }}
+    env:
+      - CGO_ENABLED=0
+
+nfpms:
+  - id: admin-bmc
+    file_name_template: "admin-bmc-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    package_name: admin-bmc
+    maintainer: NJWS Inc.
+    description: admin-bmc CLI
+    license: "Apache 2.0"
+    bindir: /usr/bin
+    builds:
+      - admin-bmc
+    formats:
+      - rpm
+      - deb
+    contents: []
