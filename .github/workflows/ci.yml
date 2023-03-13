@@ -69,12 +69,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - id: imagename
+        uses: ASzc/change-string-case-action@v2
+        with:
+          string: ${{ github.repository_owner }}
+
       - name: Build and push inventory-bmc-app
         uses: docker/build-push-action@v2
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/inventory-bmc-app:dev
+          tags: ${{ env.REGISTRY }}/${{ steps.imagename.outputs.lowercase }}/inventory-bmc-app:dev
           file: Dockerfile.inventory
 
       - name: Build and push discovery-bmc-app
@@ -82,7 +87,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/discovery-bmc-app:dev
+          tags: ${{ env.REGISTRY }}/${{ steps.imagename.outputs.lowercase }}/discovery-bmc-app:dev
           file: Dockerfile.discovery
 
       - name: Build and push monitor-bmc-app
@@ -90,7 +95,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/monitor-bmc-app:dev
+          tags: ${{ env.REGISTRY }}/${{ steps.imagename.outputs.lowercase }}/monitor-bmc-app:dev
           file: Dockerfile.monitor
 
       - name: Build and push led-bmc-app
@@ -98,5 +103,5 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/led-bmc-app:dev
+          tags: ${{ env.REGISTRY }}/${{ steps.imagename.outputs.lowercase }}/led-bmc-app:dev
           file: Dockerfile.led
