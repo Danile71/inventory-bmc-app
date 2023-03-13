@@ -14,7 +14,6 @@ import (
 	"git.fg-tech.ru/listware/proto/sdk/pbtypes"
 	"github.com/foliagecp/inventory-bmc-app/pkg/discovery/agent/types"
 	"github.com/foliagecp/inventory-bmc-app/pkg/discovery/agent/types/redfish/device"
-	"github.com/koron/go-ssdp"
 	"github.com/stmcginnis/gofish"
 )
 
@@ -23,35 +22,6 @@ func (a *Agent) entrypoint() (err error) {
 	time.Sleep(time.Millisecond * 50)
 
 	return a.createOrUpdateFunctionLink(types.FunctionContainerPath, types.DiscoveryFunctionPath, types.DiscoveryFunctionLink)
-}
-
-func (a *Agent) createOrUpdateAliveMessage(m *ssdp.AliveMessage) (err error) {
-	redfishDevicesObject, err := a.getDocument(types.RedfishDevicesPath)
-	if err != nil {
-		return
-	}
-
-	description, err := device.GetDescription(m.Location)
-	if err != nil {
-		return
-	}
-
-	u, err := url.Parse(description.Device.PresentationURL)
-	if err != nil {
-		return
-	}
-
-	// FIXME fix if http
-	u.Scheme = "https"
-
-	redfishDevice := description.ToDevice(u)
-
-	functionContext, err := PrepareDiscoveryFunc(redfishDevicesObject.Id.String(), redfishDevice)
-	if err != nil {
-		return
-	}
-
-	return a.executor.ExecAsync(a.ctx, functionContext)
 }
 
 func (a *Agent) createOrUpdate(redfishDevice device.RedfishDevice, parentID string) (err error) {
