@@ -1,13 +1,11 @@
 // Copyright 2023 NJWS Inc.
 
-package agent
+package monitor
 
 import (
 	"context"
 
 	"git.fg-tech.ru/listware/go-core/pkg/executor"
-	"git.fg-tech.ru/listware/go-core/pkg/module"
-	"github.com/foliagecp/inventory-bmc-app/pkg/discovery/agent/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,8 +18,6 @@ type Agent struct {
 	cancel context.CancelFunc
 
 	executor executor.Executor
-
-	m module.Module
 }
 
 // Run agent
@@ -39,30 +35,14 @@ func Run(ctx context.Context) (err error) {
 func (a *Agent) run() (err error) {
 	defer a.executor.Close()
 
-	log.Infof("run discovery agent")
+	log.Infof("run monitor agent")
 
 	a.osSignalCtrl()
 
-	a.m = module.New(types.Namespace, module.WithPort(31002))
-
-	log.Infof("use port (%d)", a.m.Port())
-
-	if err = a.m.Bind(types.DiscoveryFunctionType, a.discoveryFunction); err != nil {
-		return
-	}
-
 	ctx, cancel := context.WithCancel(a.ctx)
+	defer cancel()
 
-	go func() {
-		defer cancel()
-
-		if err = a.m.RegisterAndListen(ctx); err != nil {
-			log.Error(err)
-		}
-
-	}()
-
-	if err = a.entrypoint(); err != nil {
+	if err = a.monitor(); err != nil {
 		return
 	}
 

@@ -5,6 +5,7 @@ package discovery
 import (
 	"github.com/foliagecp/inventory-bmc-app/pkg/discovery/agent"
 	"github.com/foliagecp/inventory-bmc-app/pkg/discovery/bootstrap"
+	"github.com/foliagecp/inventory-bmc-app/pkg/discovery/monitor"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,22 +28,22 @@ func init() {
 			},
 		},
 		&cli.Command{
+			Name:        "monitor",
+			Description: "Run discovery monitor",
+
+			Action: func(ctx *cli.Context) (err error) {
+				return monitor.Run(ctx.Context)
+			},
+		},
+		&cli.Command{
 			Name:        "run",
 			Description: "Run discovery",
-			Flags: []cli.Flag{
-				&cli.BoolFlag{
-					Name:    "monitor",
-					Aliases: []string{"m"},
-					Usage:   "Enable ssdp monitor",
-					Value:   false,
-					EnvVars: []string{"SSDP_MONITOR"},
-				},
-			},
+
 			Action: func(ctx *cli.Context) (err error) {
 				if err = bootstrap.Run(ctx.Context); err != nil {
 					return
 				}
-				return agent.Run(ctx.Context, ctx.Bool("monitor"))
+				return agent.Run(ctx.Context)
 			},
 		},
 	}
