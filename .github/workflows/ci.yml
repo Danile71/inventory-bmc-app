@@ -74,7 +74,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.actor }}/inventory-bmc-app:dev
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/inventory-bmc-app:dev
           file: Dockerfile.inventory
 
       - name: Build and push discovery-bmc-app
@@ -82,7 +82,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.actor }}/discovery-bmc-app:dev
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/discovery-bmc-app:dev
           file: Dockerfile.discovery
 
       - name: Build and push monitor-bmc-app
@@ -90,7 +90,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.actor }}/monitor-bmc-app:dev
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/monitor-bmc-app:dev
           file: Dockerfile.monitor
 
       - name: Build and push led-bmc-app
@@ -98,5 +98,5 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.actor }}/led-bmc-app:dev
+          tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/led-bmc-app:dev
           file: Dockerfile.led
