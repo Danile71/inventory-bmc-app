@@ -5,55 +5,78 @@ on:
     branches: ["dev"]
     types: [closed]
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  deploy:
+  deploy-inventory:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v3
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push inventory-bmc-app
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: inventory-bmc-app
-          registry: ${{ env.REGISTRY }}
           tags: dev
           dockerfile: Dockerfile.inventory
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-discovery:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
 
       - name: Build and push discovery-bmc-app
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: discovery-bmc-app
-          registry: ${{ env.REGISTRY }}
           tags: dev
           dockerfile: Dockerfile.discovery
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-monitor:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
 
       - name: Build and push monitor-bmc-app
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: monitor-bmc-app
-          registry: ${{ env.REGISTRY }}
           tags: dev
           dockerfile: Dockerfile.monitor
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-led:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v3
 
       - name: Build and push led-bmc-app
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: led-bmc-app
-          registry: ${{ env.REGISTRY }}
           tags: dev
           dockerfile: Dockerfile.led
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
