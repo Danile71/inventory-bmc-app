@@ -3,55 +3,12 @@ name: CI
 on:
   pull_request:
     branches: ["dev"]
-    types: [opened, synchronize, reopened, closed]
+    types: [closed]
 
 env:
   REGISTRY: ghcr.io
 
 jobs:
-  build:
-    if: github.event.pull_request.merged == false
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-    # Checkout the repo
-    - name: Checkout the repository
-      uses: actions/checkout@v3
-
-    # Set up Go environment
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19
-        cache: true
-    
-    # Build and examine Go source code
-    - name: Build
-      run: go build -v ./...
-
-    - name: Test
-      run: go test -v ./...
-
-    - name: Vet
-      run: go vet -v ./...
-
-  golangci:
-    if: github.event.pull_request.merged == false
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout the repository
-        uses: actions/checkout@v3
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: latest
-          # TODO: add yml config
-          args: --timeout=5m -v
- 
   deploy:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
