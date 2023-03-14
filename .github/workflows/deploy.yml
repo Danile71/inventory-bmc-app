@@ -30,6 +30,7 @@ jobs:
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: inventory-bmc-app
+          registry: ${{ env.REGISTRY }}
           tags: dev
           dockerfile: Dockerfile.inventory
 
@@ -37,6 +38,7 @@ jobs:
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: discovery-bmc-app
+          registry: ${{ env.REGISTRY }}
           tags: dev
           dockerfile: Dockerfile.discovery
 
@@ -44,6 +46,7 @@ jobs:
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: monitor-bmc-app
+          registry: ${{ env.REGISTRY }}
           tags: dev
           dockerfile: Dockerfile.monitor
 
@@ -51,5 +54,6 @@ jobs:
         uses: mr-smithers-excellent/docker-build-push@v6
         with:
           image: led-bmc-app
+          registry: ${{ env.REGISTRY }}
           tags: dev
           dockerfile: Dockerfile.led
